@@ -60,8 +60,9 @@ def ingest():
     data = request.get_json() or {}
     url = data.get("url")
     notion_key = data.get("notionKey") or os.environ.get("NOTION_TOKEN")
-    if not url or not notion_key or not NOTION_PARENT_ID:
-        return jsonify({"error":"Missing URL, notionKey, or NOTION_PARENT_ID"}), 400
+    parent_id = data.get("notionParentId") or os.environ.get("NOTION_PARENT_ID")
+    if not url or not notion_key or not parent_id:
+        return jsonify({"error": "Missing URL, notionKey, or parentId"}), 400
     try:
         text = fetch_text(url)
         summary = summarize(text)
@@ -72,7 +73,7 @@ def ingest():
             "Content-Type": "application/json"
         }
         payload = {
-            "parent": {"page_id": NOTION_PARENT_ID},
+            "parent": { "page_id": parent_id },
             "properties": {
                 "Title": {"title":[{"text":{"content": summary.get("title","Untitled")}}]}
             },
@@ -82,6 +83,34 @@ def ingest():
         return jsonify({"status":"ok", "title": summary.get("title")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route("/api/pages", methods=["GET"])
+def list_pages():
+    token = request.args.get("notionKey") or os.environ.get("NOTION_TOKEN")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Notion-Version": "2022-06-28"
+    }
+    response = requests.post(
+        "https://api.notion.com/v1/search",
+        headers=headers,
+        json={"page_size": 10}
+    )
+    results = response.json().get("results", [])
+    pages = [
+        {
+            "id": page["id"].replace("-", ""),
+            "title": (
+                page.get("properties", {})
+                    .get("title", {})
+                    .get("title", [{}])[0]
+                    .get("plain_text", "(Untitled)")
+            ) if page["object"] == "page" else "(Unknown)"
+        }
+        for page in results if page["object"] == "page"
+    ]
+    return jsonify(pages)
+
 
 if __name__ == "__main__":
     app.run()
