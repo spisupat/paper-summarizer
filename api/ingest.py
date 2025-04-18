@@ -55,6 +55,7 @@ def make_blocks(summary: dict) -> list:
                        "paragraph":{"rich_text":[{"type":"text","text":{"content":content or 'N/A'}}]}})
     return blocks
 
+
 @app.route("/api/ingest", methods=["POST"])
 def ingest():
     data = request.get_json() or {}
