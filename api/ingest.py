@@ -8,7 +8,7 @@ import openai
 # Initialize Flask and OpenAI
 app = Flask(__name__)
 openai.api_key = os.environ.get('OPENAI_API_KEY')
-MODEL = os.environ.get('OPENAI_MODEL', 'o4-mini')
+MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4.1')
 
 
 def fetch_text(url: str) -> str:
@@ -34,32 +34,29 @@ def ingest():
     prompt = f"""
 Summarize this academic paper into a Markdown snippet with sections:
 
-# Title
-- **Authors**: ...
-
-## Abstract
+# Motivation
 ...
 
-## Summary
+# Key contributions
 ...
 
-## Methodology
+# Methods
 ...
 
-## Conclusion
+# Results
 ...
 
-## Tags
-- tag1, tag2
+# Limitations
+...
 
 Paper content:
-
+```
 {text}
+```
 """
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model=MODEL,
         messages=[{'role': 'user', 'content': prompt}],
-        temperature=0.3
     )
     md = response.choices[0].message.content
 
